@@ -15,24 +15,30 @@ const client = twilio(
   process.env.TWILIO_AUTH_TOKEN
 );
 
-let otpStore = {}; // Temporary store for OTP verification
+let otpStore = {}; // temporary in-memory store
 
-
+// ✅ SEND OTP
 app.post("/send-otp", async (req, res) => {
   try {
- 
     const { phone } = req.body;
     if (!phone) return res.status(400).json({ error: "Phone number required" });
 
-    const otp = Math.floor(100000 + Math.random() * 900000);
+    // Always add +91 automatically
+    const formattedPhone = phone.startsWith("+91") ? phone : `+91${phone}`;
 
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Save OTP for later verification
+    otpStore[formattedPhone] = otp;
+
+    // Send OTP using Twilio
     const message = await client.messages.create({
       body: `Your OTP is ${otp}`,
       from: process.env.TWILIO_PHONE,
-      to: phone,
+      to: formattedPhone,
     });
 
-    console.log("✅ OTP sent:", message.sid);
+    console.log(`✅ OTP sent to ${formattedPhone}: ${otp}`);
     res.json({ success: true, message: "OTP sent successfully" });
   } catch (error) {
     console.error("❌ Twilio error:", error.message);
@@ -40,19 +46,23 @@ app.post("/send-otp", async (req, res) => {
   }
 });
 
-
-// ✅ 2. Verify OTP
+// ✅ VERIFY OTP
 app.post("/verify-otp", (req, res) => {
   const { phone, otp } = req.body;
-  if (otpStore[phone] === otp) {
-    delete otpStore[phone];
-    res.json({ success: true, message: "OTP verified successfully" });
+  const formattedPhone = phone.startsWith("+91") ? phone : `+91${phone}`;
+
+  console.log("📩 Verify request:", { phone, formattedPhone, otp });
+  console.log("🧠 Stored OTPs:", otpStore);
+
+  if (otpStore[formattedPhone] && otpStore[formattedPhone] === otp) {
+    delete otpStore[formattedPhone];
+    return res.json({ success: true, message: "OTP verified successfully" });
   } else {
-    res.status(400).json({ success: false, message: "Invalid OTP" });
+    return res.status(400).json({ success: false, message: "Invalid OTP" });
   }
 });
 
-// ✅ 3. Submit form (send email)
+// ✅ SUBMIT FORM (send email)
 app.post("/submit-form", async (req, res) => {
   const { name, email, phone, service, message } = req.body;
 
