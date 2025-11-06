@@ -18,27 +18,35 @@ const client = twilio(
 let otpStore = {}; // Temporary store for OTP verification
 
 
-app.post("/send-otp", async (req, res) => {
+const sendOTP = async (e) => {
+  e.preventDefault();
+
   try {
- 
-    const { phone } = req.body;
-    if (!phone) return res.status(400).json({ error: "Phone number required" });
+    // 🧩 Automatically prepend +91 if not already present
+    let formattedPhone = phone.trim();
+    if (!formattedPhone.startsWith("+91")) {
+      formattedPhone = `+91${formattedPhone}`;
+    }
 
-    const otp = Math.floor(100000 + Math.random() * 900000);
-
-    const message = await client.messages.create({
-      body: `Your OTP is ${otp}`,
-      from: process.env.TWILIO_PHONE,
-      to: phone,
+    const response = await fetch("https://jpbackend-4.onrender.com/send-otp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone: formattedPhone }),
     });
 
-    console.log("✅ OTP sent:", message.sid);
-    res.json({ success: true, message: "OTP sent successfully" });
+    const data = await response.json();
+
+    if (response.ok) {
+      alert("✅ OTP sent successfully!");
+    } else {
+      console.error("Error sending OTP:", data.error || data.message);
+      alert("❌ Failed to send OTP. Please check number format.");
+    }
   } catch (error) {
-    console.error("❌ Twilio error:", error.message);
-    res.status(500).json({ error: error.message });
+    console.error("Error sending OTP:", error);
+    alert("Something went wrong. Try again later.");
   }
-});
+};
 
 
 // ✅ 2. Verify OTP
