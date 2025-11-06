@@ -20,6 +20,7 @@ let otpStore = {}; // Temporary store for OTP verification
 
 app.post("/send-otp", async (req, res) => {
   try {
+ 
     const { phone } = req.body;
     if (!phone) return res.status(400).json({ error: "Phone number required" });
 
@@ -27,7 +28,7 @@ app.post("/send-otp", async (req, res) => {
 
     const message = await client.messages.create({
       body: `Your OTP is ${otp}`,
-      from: process.env.TWILIO_PHONE_NUMBER,
+      from: process.env.TWILIO_PHONE,
       to: phone,
     });
 
