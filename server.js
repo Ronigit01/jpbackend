@@ -17,23 +17,18 @@ const client = twilio(
 
 let otpStore = {}; // Temporary store for OTP verification
 
-// ✅ 1. Send OTP
 app.post("/send-otp", async (req, res) => {
-  const { phone } = req.body;
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  otpStore[phone] = otp;
-
   try {
-    await client.messages.create({
-      body: `Your verification code is ${otp}`,
-      from: process.env.TWILIO_PHONE,
-      to: phone,
-    });
-    res.json({ success: true, message: "OTP sent successfully" });
+    const { phone } = req.body;
+    if (!phone)
+      return res.status(400).json({ error: "Phone number is required" });
+
+    const otp = Math.floor(100000 + Math.random() * 900000);
+    console.log(`✅ Mock OTP sent to ${phone}: ${otp}`);
+    res.json({ success: true, otp, message: "OTP mock sent successfully" });
   } catch (error) {
-    res
-      .status(500)
-      .json({ success: false, message: "Error sending OTP", error });
+    console.error("❌ Error sending OTP:", error.message);
+    res.status(500).json({ error: error.message });
   }
 });
 
