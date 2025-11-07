@@ -4,6 +4,9 @@ import bodyParser from "body-parser";
 import dotenv from "dotenv";
 import twilio from "twilio";
 import nodemailer from "nodemailer";
+import sgMail from "@sendgrid/mail";
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
 
 dotenv.config();
 const app = express();
@@ -64,49 +67,30 @@ app.post("/verify-otp", (req, res) => {
 
 // ✅ SUBMIT FORM (send email)
 // ✅ SUBMIT FORM (send email)
+
 app.post("/submit-form", async (req, res) => {
-  console.log("📩 Form data received:", req.body);
+  const msg = {
+    to: process.env.EMAIL_USER,
+    from: process.env.EMAIL_USER,
+    replyTo: req.body.email,
+    subject: `New Contact Form Submission from ${req.body.name}`,
+    text: `Name: ${req.body.name} Email: ${req.body.email} Phone: ${req.body.phone} Service: ${req.body.service} Message: ${req.body.message}`,
+    html: `<h3>Contact Form Details</h3>
+           <p><strong>Name:</strong> ${req.body.name}</p>
+           <p><strong>Email:</strong> ${req.body.email}</p>
+           <p><strong>Phone:</strong> ${req.body.phone}</p>
+           <p><strong>Service:</strong> ${req.body.service}</p>
+           <p><strong>Message:</strong> ${req.body.message}</p>`,
+  };
 
   try {
-    // <-- define transporter here
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
-
-    const info = await transporter.sendMail({
-      from: `"Contact Form" <${process.env.EMAIL_USER}>`, // nicer format
-      to: process.env.EMAIL_USER,                        // send to yourself
-      replyTo: req.body.email,                           // user email
-      subject: `New Contact Form Submission from ${req.body.name}`,
-      text: `Name: ${req.body.name}
-Email: ${req.body.email}
-Phone: ${req.body.phone}
-Service: ${req.body.service}
-Message: ${req.body.message}`,
-      html: `
-        <h3>Contact Form Details</h3>
-        <p><strong>Name:</strong> ${req.body.name}</p>
-        <p><strong>Email:</strong> ${req.body.email}</p>
-        <p><strong>Phone:</strong> ${req.body.phone}</p>
-        <p><strong>Service:</strong> ${req.body.service}</p>
-        <p><strong>Message:</strong> ${req.body.message}</p>
-      `,
-    });
-
-    console.log("✅ Email sent successfully:", info.messageId);
-
-    // send response back to frontend
+    await sgMail.send(msg);
     res.json({ success: true, message: "Form submitted successfully" });
-  } catch (err) {
-    console.error("❌ Email send error:", err);
+  } catch (error) {
+    console.error(error);
     res.status(500).json({ success: false, message: "Failed to send email" });
   }
 });
-
 
 
 
