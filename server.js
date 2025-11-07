@@ -76,23 +76,23 @@ app.post("/submit-form", async (req, res) => {
     });
 
     // Send email asynchronously, do NOT await it
-    transporter
-      .sendMail({
-        from: process.env.EMAIL_USER,
-        to: process.env.EMAIL_USER,
-        replyTo: req.body.email,
-        subject: "New Contact Form Submission",
-        html: `
-        <h3>Contact Form Details</h3>
-        <p><strong>Name:</strong> ${req.body.name}</p>
-        <p><strong>Email:</strong> ${req.body.email}</p>
-        <p><strong>Phone:</strong> ${req.body.phone}</p>
-        <p><strong>Service:</strong> ${req.body.service}</p>
-        <p><strong>Message:</strong> ${req.body.message}</p>
-      `,
-      })
-      .then(() => console.log("✅ Email sent successfully"))
-      .catch((err) => console.error("❌ Email send error:", err));
+  transporter
+    .sendMail({
+      from: `"Contact Form" <${process.env.EMAIL_USER}>`,
+      to: process.env.EMAIL_USER,
+      replyTo: req.body.email,
+      subject: `New Contact Form Submission from ${req.body.name}`,
+      text: `Name: ${req.body.name}\nEmail: ${req.body.email}\nPhone: ${req.body.phone}\nService: ${req.body.service}\nMessage: ${req.body.message}`,
+      html: `<h3>Contact Form Details</h3>
+         <p><strong>Name:</strong> ${req.body.name}</p>
+         <p><strong>Email:</strong> ${req.body.email}</p>
+         <p><strong>Phone:</strong> ${req.body.phone}</p>
+         <p><strong>Service:</strong> ${req.body.service}</p>
+         <p><strong>Message:</strong> ${req.body.message}</p>`,
+    })
+    .then(() => console.log("✅ Email sent successfully"))
+    .catch((err) => console.error("❌ Email send error:", err));
+
 
     // Respond immediately to frontend
     res.json({ success: true, message: "Form submitted successfully" });
