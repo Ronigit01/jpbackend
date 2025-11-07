@@ -66,40 +66,32 @@ app.post("/verify-otp", (req, res) => {
 app.post("/submit-form", async (req, res) => {
   console.log("📩 Form data received:", req.body);
 
-  try {
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
+ try {
+   const info = await transporter.sendMail({
+     from: `"Contact Form" <${process.env.EMAIL_USER}>`, // nicer format
+     to: process.env.EMAIL_USER, // send to yourself
+     replyTo: req.body.email, // user email
+     subject: `New Contact Form Submission from ${req.body.name}`,
+     text: `Name: ${req.body.name}
+Email: ${req.body.email}
+Phone: ${req.body.phone}
+Service: ${req.body.service}
+Message: ${req.body.message}`,
+     html: `
+      <h3>Contact Form Details</h3>
+      <p><strong>Name:</strong> ${req.body.name}</p>
+      <p><strong>Email:</strong> ${req.body.email}</p>
+      <p><strong>Phone:</strong> ${req.body.phone}</p>
+      <p><strong>Service:</strong> ${req.body.service}</p>
+      <p><strong>Message:</strong> ${req.body.message}</p>
+    `,
+   });
 
-    // Send email asynchronously, do NOT await it
-  transporter
-    .sendMail({
-      from: `"Contact Form" <${process.env.EMAIL_USER}>`,
-      to: process.env.EMAIL_USER,
-      replyTo: req.body.email,
-      subject: `New Contact Form Submission from ${req.body.name}`,
-      text: `Name: ${req.body.name}\nEmail: ${req.body.email}\nPhone: ${req.body.phone}\nService: ${req.body.service}\nMessage: ${req.body.message}`,
-      html: `<h3>Contact Form Details</h3>
-         <p><strong>Name:</strong> ${req.body.name}</p>
-         <p><strong>Email:</strong> ${req.body.email}</p>
-         <p><strong>Phone:</strong> ${req.body.phone}</p>
-         <p><strong>Service:</strong> ${req.body.service}</p>
-         <p><strong>Message:</strong> ${req.body.message}</p>`,
-    })
-    .then(() => console.log("✅ Email sent successfully"))
-    .catch((err) => console.error("❌ Email send error:", err));
+   console.log("✅ Email sent successfully:", info.messageId);
+ } catch (err) {
+   console.error("❌ Email send error:", err);
+ }
 
-
-    // Respond immediately to frontend
-    res.json({ success: true, message: "Form submitted successfully" });
-  } catch (error) {
-    console.error("❌ Unexpected error:", error);
-    res.status(500).json({ success: false, message: "Unexpected error" });
-  }
 });
 
 
