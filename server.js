@@ -64,7 +64,7 @@ app.post("/verify-otp", (req, res) => {
 
 // ✅ SUBMIT FORM (send email)
 app.post("/submit-form", async (req, res) => {
-  const { name, email, phone, service, message } = req.body;
+  console.log("📩 Form data received:", req.body);
 
   try {
     const transporter = nodemailer.createTransport({
@@ -75,27 +75,34 @@ app.post("/submit-form", async (req, res) => {
       },
     });
 
-    await transporter.sendMail({
-      from: email,
-      to: process.env.EMAIL_USER,
-      subject: "New Contact Form Submission",
-      html: `
+    // Send email asynchronously but don't block frontend
+    transporter
+      .sendMail({
+        from: req.body.email,
+        to: process.env.EMAIL_USER,
+        subject: "New Contact Form Submission",
+        html: `
         <h3>Contact Form Details</h3>
-        <p><strong>Name:</strong> ${name}</p>
-        <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Phone:</strong> ${phone}</p>
-        <p><strong>Service:</strong> ${service}</p>
-        <p><strong>Message:</strong> ${message}</p>
+        <p><strong>Name:</strong> ${req.body.name}</p>
+        <p><strong>Email:</strong> ${req.body.email}</p>
+        <p><strong>Phone:</strong> ${req.body.phone}</p>
+        <p><strong>Service:</strong> ${req.body.service}</p>
+        <p><strong>Message:</strong> ${req.body.message}</p>
       `,
-    });
+      })
+      .then(() => console.log("✅ Email sent successfully"))
+      .catch((err) => console.error("❌ Email send error:", err));
 
+    // Respond immediately to frontend
     res.json({ success: true, message: "Form submitted successfully" });
   } catch (error) {
-    res
-      .status(500)
-      .json({ success: false, message: "Error sending email", error });
+    console.error("❌ Unexpected error:", error);
+    res.status(500).json({ success: false, message: "Unexpected error" });
   }
 });
+
+
+
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
