@@ -75,21 +75,23 @@ app.post("/submit-form", async (req, res) => {
       },
     });
 
-    // Send email asynchronously but don't block frontend
-    await transporter.sendMail({
-  from: process.env.EMAIL_USER,     // Use your Gmail account
-  to: process.env.EMAIL_USER,       // Send to yourself
-  replyTo: req.body.email,          // User's email goes here
-  subject: "New Contact Form Submission",
-  html: `
-    <h3>Contact Form Details</h3>
-    <p><strong>Name:</strong> ${req.body.name}</p>
-    <p><strong>Email:</strong> ${req.body.email}</p>
-    <p><strong>Phone:</strong> ${req.body.phone}</p>
-    <p><strong>Service:</strong> ${req.body.service}</p>
-    <p><strong>Message:</strong> ${req.body.message}</p>
-  `,
-}).then(() => console.log("✅ Email sent successfully"))
+    // Send email asynchronously, do NOT await it
+    transporter
+      .sendMail({
+        from: process.env.EMAIL_USER,
+        to: process.env.EMAIL_USER,
+        replyTo: req.body.email,
+        subject: "New Contact Form Submission",
+        html: `
+        <h3>Contact Form Details</h3>
+        <p><strong>Name:</strong> ${req.body.name}</p>
+        <p><strong>Email:</strong> ${req.body.email}</p>
+        <p><strong>Phone:</strong> ${req.body.phone}</p>
+        <p><strong>Service:</strong> ${req.body.service}</p>
+        <p><strong>Message:</strong> ${req.body.message}</p>
+      `,
+      })
+      .then(() => console.log("✅ Email sent successfully"))
       .catch((err) => console.error("❌ Email send error:", err));
 
     // Respond immediately to frontend
@@ -99,6 +101,7 @@ app.post("/submit-form", async (req, res) => {
     res.status(500).json({ success: false, message: "Unexpected error" });
   }
 });
+
 
 
 
