@@ -1,4 +1,4 @@
-import express from "express";
+write full  import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
 import dotenv from "dotenv";
@@ -30,43 +30,38 @@ sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 // Temporary store for OTPs
 let otpStore = {};
 
-// ✅ SEND OTP via WhatsApp or SMS
+// ✅ SEND OTP via WhatsApp
 app.post("/send-otp", async (req, res) => {
   try {
-    const { phone, method } = req.body; // method = "whatsapp" or "sms"
+    const { phone } = req.body;
     if (!phone) return res.status(400).json({ error: "Phone number required" });
 
-    const formattedPhone = phone.startsWith("+") ? phone : `+91${phone}`;
+    const formattedPhone = phone.startsWith("+91") ? phone : `+91${phone}`;
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     otpStore[formattedPhone] = otp;
 
-    let fromNumber, toNumber;
-    if (method === "whatsapp") {
-      fromNumber = `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`;
-      toNumber = `whatsapp:${formattedPhone}`;
-    } else {
-      fromNumber = process.env.TWILIO_SMS_NUMBER;
-      toNumber = formattedPhone;
-    }
-
     await client.messages.create({
-      body: `Your OTP is: ${otp}`,
-      from: fromNumber,
-      to: toNumber,
+      body: `Your WhatsApp OTP is ${otp}`,
+      from: "whatsapp:+14155238886", // ✅ Twilio Sandbox number
+      to: `whatsapp:${formattedPhone}`,
     });
 
-    console.log(`✅ OTP sent to ${formattedPhone} via ${method}: ${otp}`);
-    res.json({ success: true, message: `OTP sent via ${method} successfully` });
+    console.log(`✅ WhatsApp OTP sent to ${formattedPhone}: ${otp}`);
+    res.json({ success: true, message: "OTP sent via WhatsApp successfully" });
   } catch (error) {
-    console.error("❌ Twilio error:", error.message);
+    console.error("❌ WhatsApp Twilio error:", error.message);
     res.status(500).json({ error: error.message });
   }
+});
+
+app.get("/", (req, res) => {
+  res.send("✅ Backend is live and working!");
 });
 
 // ✅ VERIFY OTP
 app.post("/verify-otp", (req, res) => {
   const { phone, otp } = req.body;
-  const formattedPhone = phone.startsWith("+") ? phone : `+91${phone}`;
+  const formattedPhone = phone.startsWith("+91") ? phone : `+91${phone}`;
 
   console.log("📩 Verify request:", { phone, formattedPhone, otp });
   console.log("🧠 Stored OTPs:", otpStore);
@@ -118,12 +113,15 @@ Message: ${req.body.message}
   }
 });
 
-// ✅ KEEP ALIVE FUNCTION
+// ✅ KEEP ALIVE FUNCTION (active)
 const keepAlive = async () => {
   try {
+    // 🔹 Ping a small Netlify endpoint (optional helper)
     await axios.get(
       "https://keepalive404.netlify.app/.netlify/functions/keepalive"
     );
+
+    // 🔹 Ping your own Render backend (update with your backend link)
     await axios.get("https://jpbackend-8.onrender.com");
     console.log("♻️ Keep-alive ping successful");
   } catch (err) {
@@ -134,11 +132,6 @@ const keepAlive = async () => {
 // Runs every 14 minutes
 setInterval(keepAlive, 14 * 60 * 1000);
 
-// ✅ Basic route
-app.get("/", (req, res) => {
-  res.send("✅ Backend is live and working!");
-});
-
 // ✅ Start Server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`)); 
