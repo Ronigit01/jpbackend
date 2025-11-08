@@ -46,6 +46,10 @@ app.post("/send-otp", async (req, res) => {
   }
 });
 
+app.get("/", (req, res) => {
+  res.send("✅ Backend is live and working!");
+});
+
 
 // ✅ VERIFY OTP
 app.post("/verify-otp", (req, res) => {
