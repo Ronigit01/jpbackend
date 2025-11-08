@@ -24,8 +24,8 @@ const client = twilio(
   process.env.TWILIO_AUTH_TOKEN
 );
 
-// 🔹 Initialize Gmail Transporter
-const gmailTransporter = nodemailer.createTransporter({
+// 🔹 Initialize Gmail Transporter - FIXED: createTransport (not createTransporter)
+const gmailTransporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
     user: process.env.EMAIL_USER, // jpgroupserviceshr@gmail.com
