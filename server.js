@@ -9,6 +9,14 @@ dotenv.config();
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
+import cors from "cors";
+
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST"],
+  })
+);
 
 // 🔹 Initialize Twilio
 const client = twilio(
