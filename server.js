@@ -22,7 +22,7 @@ sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 // Temporary store for OTPs
 let otpStore = {};
 
-// ✅ SEND OTP
+// ✅ SEND OTP via WhatsApp
 app.post("/send-otp", async (req, res) => {
   try {
     const { phone } = req.body;
@@ -33,18 +33,19 @@ app.post("/send-otp", async (req, res) => {
     otpStore[formattedPhone] = otp;
 
     await client.messages.create({
-      body: `Your OTP is ${otp}`,
-      from: process.env.TWILIO_PHONE,
-      to: formattedPhone,
+      body: `Your WhatsApp OTP is ${otp}`,
+      from: "whatsapp:+14155238886", // ✅ Sandbox number
+      to: `whatsapp:${formattedPhone}`, // ✅ Add whatsapp: prefix
     });
 
-    console.log(`✅ OTP sent to ${formattedPhone}: ${otp}`);
-    res.json({ success: true, message: "OTP sent successfully" });
+    console.log(`✅ WhatsApp OTP sent to ${formattedPhone}: ${otp}`);
+    res.json({ success: true, message: "OTP sent via WhatsApp successfully" });
   } catch (error) {
-    console.error("❌ Twilio error:", error.message);
+    console.error("❌ WhatsApp Twilio error:", error.message);
     res.status(500).json({ error: error.message });
   }
 });
+
 
 // ✅ VERIFY OTP
 app.post("/verify-otp", (req, res) => {
