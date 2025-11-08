@@ -3,7 +3,7 @@ import cors from "cors";
 import bodyParser from "body-parser";
 import dotenv from "dotenv";
 import twilio from "twilio";
-import sgMail from "@sendgrid/mail";
+import nodemailer from "nodemailer";
 import axios from "axios";
 
 dotenv.config();
@@ -24,8 +24,23 @@ const client = twilio(
   process.env.TWILIO_AUTH_TOKEN
 );
 
-// 🔹 Initialize SendGrid
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+// 🔹 Initialize Gmail Transporter
+const gmailTransporter = nodemailer.createTransporter({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER, // jpgroupserviceshr@gmail.com
+    pass: process.env.EMAIL_PASS, // ypybimng
+  },
+});
+
+// Test Gmail connection
+gmailTransporter.verify((error, success) => {
+  if (error) {
+    console.log("❌ Gmail connection error:", error);
+  } else {
+    console.log("✅ Gmail transporter ready");
+  }
+});
 
 // Temporary store for OTPs
 let otpStore = {};
@@ -74,7 +89,7 @@ app.post("/verify-otp", (req, res) => {
   }
 });
 
-// ✅ SUBMIT FORM (SendGrid Email) - FIXED VERSION
+// ✅ SUBMIT FORM (Gmail) - FIXED VERSION
 app.post("/submit-form", async (req, res) => {
   console.log("📩 Form data received:", req.body);
 
@@ -98,23 +113,14 @@ app.post("/submit-form", async (req, res) => {
   }
 
   try {
-    const msg = {
-      to: process.env.EMAIL_USER, // Your receiving email
+    const mailOptions = {
       from: {
-        email: process.env.SENDGRID_VERIFIED_SENDER, // MUST be verified in SendGrid
         name: "JP Group Services Contact Form",
+        address: process.env.EMAIL_USER, // jpgroupserviceshr@gmail.com
       },
+      to: process.env.EMAIL_USER, // Send to yourself
       replyTo: email, // Customer's email for replies
       subject: `📬 New Contact Form Submission from ${name}`,
-      text: `
-Name: ${name}
-Email: ${email}
-Phone: ${phone}
-Company: ${company || "Not provided"}
-Service: ${service}
-Message: ${message || "Not provided"}
-Submitted: ${new Date().toLocaleString()}
-      `,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #2563eb;">📬 New Contact Form Submission</h2>
@@ -134,36 +140,54 @@ Submitted: ${new Date().toLocaleString()}
               )}
             </p>
           </div>
+          <div style="margin-top: 15px; padding: 10px; background: #fef3c7; border-radius: 5px;">
+            <p style="margin: 0; color: #92400e; font-size: 12px;">
+              <strong>⚠️ Important:</strong> Click "Reply" to respond directly to ${name} at ${email}
+            </p>
+          </div>
         </div>
+      `,
+      text: `
+New Contact Form Submission:
+Name: ${name}
+Email: ${email}
+Phone: ${phone}
+Company: ${company || "Not provided"}
+Service: ${service}
+Message: ${message || "Not provided"}
+Submitted: ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}
+
+Reply directly to: ${email}
       `,
     };
 
-    console.log("📧 Attempting to send email via SendGrid...");
-    const [response] = await sgMail.send(msg);
+    console.log("📧 Attempting to send email via Gmail...");
+    const info = await gmailTransporter.sendMail(mailOptions);
 
-    console.log("✅ SendGrid response status:", response.statusCode);
-    console.log("✅ Email sent successfully to:", process.env.EMAIL_USER);
+    console.log("✅ Email sent successfully! Message ID:", info.messageId);
+    console.log("✅ To:", process.env.EMAIL_USER);
+    console.log("✅ From customer:", email);
 
     res.json({
       success: true,
       message: "Form submitted successfully",
     });
   } catch (error) {
-    console.error("❌ SendGrid error details:");
+    console.error("❌ Gmail error details:");
     console.error("Error message:", error.message);
     console.error("Error code:", error.code);
-    console.error("Error response:", error.response?.body);
 
-    // More specific error handling
-    if (error.response) {
-      const { body } = error.response;
-      console.error("SendGrid API Error Body:", body);
+    // Specific error handling for Gmail
+    if (error.code === "EAUTH") {
+      console.error(
+        "❌ Gmail authentication failed. Check your email password."
+      );
     }
 
     res.status(500).json({
       success: false,
       message: "Failed to send email",
-      error: error.message,
+      error: "Please try again or contact us directly",
     });
   }
 });
@@ -171,7 +195,7 @@ Submitted: ${new Date().toLocaleString()}
 // ✅ KEEP ALIVE FUNCTION
 const keepAlive = async () => {
   try {
-    await axios.get("https://jpbackend-8.onrender.com");
+    await axios.get("https://jpbackend-9.onrender.com"); // Update with your current backend URL
     console.log("♻️ Keep-alive ping successful");
   } catch (err) {
     console.error("Keep-alive failed:", err.message);
