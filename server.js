@@ -101,6 +101,20 @@ Message: ${req.body.message}
   }
 });
 
+const keepAlive = async () => {
+  try {
+    await axios.get(
+      "https://keepalive404.netlify.app/.netlify/functions/keepalive"
+    );
+
+    await axios.get(tor - backend - link / keep - alive);
+  } catch (err) {
+    console.error("Keep-alive failed:", err.message);
+  }
+};
+
+setInterval(keepAlive, 14 * 60 * 1000);
+
 // ✅ Start Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
