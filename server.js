@@ -1,4 +1,4 @@
- import express from "express";
+import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
 import dotenv from "dotenv";
@@ -42,7 +42,7 @@ app.post("/send-otp", async (req, res) => {
 
     await client.messages.create({
       body: `Your WhatsApp OTP is ${otp}`,
-      from: "whatsapp:+14155238886", // ✅ Twilio Sandbox number
+      from: "whatsapp:+14155238886",
       to: `whatsapp:${formattedPhone}`,
     });
 
@@ -74,54 +74,103 @@ app.post("/verify-otp", (req, res) => {
   }
 });
 
-// ✅ SUBMIT FORM (SendGrid Email)
+// ✅ SUBMIT FORM (SendGrid Email) - FIXED VERSION
 app.post("/submit-form", async (req, res) => {
   console.log("📩 Form data received:", req.body);
 
-  const msg = {
-    to: process.env.EMAIL_USER,
-    from: {
-      email: process.env.EMAIL_USER,
-      name: "JP Services Contact Form",
-    },
-    replyTo: req.body.email,
-    subject: `📬 New Contact Form Submission from ${req.body.name}`,
-    text: `
-Name: ${req.body.name}
-Email: ${req.body.email}
-Phone: ${req.body.phone}
-Service: ${req.body.service}
-Message: ${req.body.message}
-    `,
-    html: `
-      <h3>Contact Form Details</h3>
-      <p><strong>Name:</strong> ${req.body.name}</p>
-      <p><strong>Email:</strong> ${req.body.email}</p>
-      <p><strong>Phone:</strong> ${req.body.phone}</p>
-      <p><strong>Service:</strong> ${req.body.service}</p>
-      <p><strong>Message:</strong> ${req.body.message}</p>
-    `,
-  };
+  const { name, email, phone, service, message, company } = req.body;
+
+  // Validate required fields
+  if (!name || !email || !phone || !service) {
+    return res.status(400).json({
+      success: false,
+      message: "Missing required fields",
+    });
+  }
+
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid email format",
+    });
+  }
 
   try {
+    const msg = {
+      to: process.env.EMAIL_USER, // Your receiving email
+      from: {
+        email: process.env.SENDGRID_VERIFIED_SENDER, // MUST be verified in SendGrid
+        name: "JP Group Services Contact Form",
+      },
+      replyTo: email, // Customer's email for replies
+      subject: `📬 New Contact Form Submission from ${name}`,
+      text: `
+Name: ${name}
+Email: ${email}
+Phone: ${phone}
+Company: ${company || "Not provided"}
+Service: ${service}
+Message: ${message || "Not provided"}
+Submitted: ${new Date().toLocaleString()}
+      `,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2563eb;">📬 New Contact Form Submission</h2>
+          <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border-left: 4px solid #2563eb;">
+            <p><strong>👤 Name:</strong> ${name}</p>
+            <p><strong>📧 Email:</strong> <a href="mailto:${email}">${email}</a></p>
+            <p><strong>📞 Phone:</strong> <a href="tel:${phone}">${phone}</a></p>
+            <p><strong>🏢 Company:</strong> ${company || "Not provided"}</p>
+            <p><strong>🛠️ Service:</strong> ${service}</p>
+            <p><strong>💬 Message:</strong> ${message || "Not provided"}</p>
+          </div>
+          <div style="margin-top: 20px; padding: 15px; background: #dcfce7; border-radius: 8px;">
+            <p style="margin: 0; color: #166534;">
+              <strong>📅 Submitted:</strong> ${new Date().toLocaleString(
+                "en-IN",
+                { timeZone: "Asia/Kolkata" }
+              )}
+            </p>
+          </div>
+        </div>
+      `,
+    };
+
+    console.log("📧 Attempting to send email via SendGrid...");
     const [response] = await sgMail.send(msg);
+
     console.log("✅ SendGrid response status:", response.statusCode);
-    res.json({ success: true, message: "Form submitted successfully" });
+    console.log("✅ Email sent successfully to:", process.env.EMAIL_USER);
+
+    res.json({
+      success: true,
+      message: "Form submitted successfully",
+    });
   } catch (error) {
-    console.error("❌ SendGrid error:", error.response?.body || error.message);
-    res.status(500).json({ success: false, message: "Failed to send email" });
+    console.error("❌ SendGrid error details:");
+    console.error("Error message:", error.message);
+    console.error("Error code:", error.code);
+    console.error("Error response:", error.response?.body);
+
+    // More specific error handling
+    if (error.response) {
+      const { body } = error.response;
+      console.error("SendGrid API Error Body:", body);
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to send email",
+      error: error.message,
+    });
   }
 });
 
-// ✅ KEEP ALIVE FUNCTION (active)
+// ✅ KEEP ALIVE FUNCTION
 const keepAlive = async () => {
   try {
-    // 🔹 Ping a small Netlify endpoint (optional helper)
-    await axios.get(
-      "https://keepalive404.netlify.app/.netlify/functions/keepalive"
-    );
-
-    // 🔹 Ping your own Render backend (update with your backend link)
     await axios.get("https://jpbackend-8.onrender.com");
     console.log("♻️ Keep-alive ping successful");
   } catch (err) {
@@ -129,9 +178,8 @@ const keepAlive = async () => {
   }
 };
 
-// Runs every 14 minutes
 setInterval(keepAlive, 14 * 60 * 1000);
 
 // ✅ Start Server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`)); 
+app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
