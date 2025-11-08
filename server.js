@@ -4,19 +4,19 @@ import bodyParser from "body-parser";
 import dotenv from "dotenv";
 import twilio from "twilio";
 import sgMail from "@sendgrid/mail";
+import axios from "axios";
 
 dotenv.config();
 const app = express();
-app.use(cors());
-app.use(bodyParser.json());
-import cors from "cors";
 
+// ✅ Middleware
 app.use(
   cors({
     origin: "*",
     methods: ["GET", "POST"],
   })
 );
+app.use(bodyParser.json());
 
 // 🔹 Initialize Twilio
 const client = twilio(
@@ -42,8 +42,8 @@ app.post("/send-otp", async (req, res) => {
 
     await client.messages.create({
       body: `Your WhatsApp OTP is ${otp}`,
-      from: "whatsapp:+14155238886", // ✅ Sandbox number
-      to: `whatsapp:${formattedPhone}`, // ✅ Add whatsapp: prefix
+      from: "whatsapp:+14155238886", // ✅ Twilio Sandbox number
+      to: `whatsapp:${formattedPhone}`,
     });
 
     console.log(`✅ WhatsApp OTP sent to ${formattedPhone}: ${otp}`);
@@ -57,7 +57,6 @@ app.post("/send-otp", async (req, res) => {
 app.get("/", (req, res) => {
   res.send("✅ Backend is live and working!");
 });
-
 
 // ✅ VERIFY OTP
 app.post("/verify-otp", (req, res) => {
@@ -80,7 +79,7 @@ app.post("/submit-form", async (req, res) => {
   console.log("📩 Form data received:", req.body);
 
   const msg = {
-    to: process.env.EMAIL_USER, // Must be verified sender
+    to: process.env.EMAIL_USER,
     from: {
       email: process.env.EMAIL_USER,
       name: "JP Services Contact Form",
@@ -114,18 +113,23 @@ Message: ${req.body.message}
   }
 });
 
+// ✅ KEEP ALIVE FUNCTION (active)
 const keepAlive = async () => {
   try {
+    // 🔹 Ping a small Netlify endpoint (optional helper)
     await axios.get(
       "https://keepalive404.netlify.app/.netlify/functions/keepalive"
     );
 
-    await axios.get(tor - backend - link / keep - alive);
+    // 🔹 Ping your own Render backend (update with your backend link)
+    await axios.get("https://jpbackend-8.onrender.com");
+    console.log("♻️ Keep-alive ping successful");
   } catch (err) {
     console.error("Keep-alive failed:", err.message);
   }
 };
 
+// Runs every 14 minutes
 setInterval(keepAlive, 14 * 60 * 1000);
 
 // ✅ Start Server
