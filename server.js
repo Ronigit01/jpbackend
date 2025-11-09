@@ -64,13 +64,13 @@ app.post("/send-otp", async (req, res) => {
     console.log(
       `📱 Attempting to send OTP via SMS to: ${formattedPhone}, OTP: ${otp}`
     );
-    console.log(`📱 Using Twilio from: ${process.env.TWILIO_PHONE_NUMBER}`);
+    console.log(`📱 Using Twilio from: ${process.env.TWILIO_PHONE}`);
     console.log(`📱 Sending to: ${formattedPhone}`);
 
     // ✅ FIXED: Send SMS (not WhatsApp)
     const message = await client.messages.create({
       body: `Your JP Group Services verification code is: ${otp}. This code will expire in 10 minutes.`,
-      from: process.env.TWILIO_PHONE_NUMBER, // Your SMS-enabled Twilio number
+      from: process.env.TWILIO_PHONE, // Your SMS-enabled Twilio number
       to: formattedPhone, // Regular phone number (not WhatsApp)
     });
 
