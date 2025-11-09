@@ -23,27 +23,71 @@ sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 let otpStore = {};
 
 // ✅ SEND OTP
-// ✅ SEND OTP via WhatsApp
+// ✅ SEND OTP via WhatsApp - DEBUGGED VERSION
 app.post("/send-otp", async (req, res) => {
   try {
     const { phone } = req.body;
-    if (!phone) return res.status(400).json({ error: "Phone number required" });
+    
+    console.log("📱 OTP Request received for phone:", phone);
+    
+    if (!phone) {
+      return res.status(400).json({ error: "Phone number required" });
+    }
 
-    const formattedPhone = phone.startsWith("+91") ? phone : `+91${phone}`;
+    // Validate phone number format
+    const cleanedPhone = phone.replace(/\D/g, '');
+    if (cleanedPhone.length !== 12 || !cleanedPhone.startsWith('91')) {
+      console.log("❌ Invalid phone format:", cleanedPhone);
+      return res.status(400).json({ error: "Invalid phone number format. Must be 12 digits starting with 91" });
+    }
+
+    const formattedPhone = `+${cleanedPhone}`;
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     otpStore[formattedPhone] = otp;
 
-    await client.messages.create({
-      body: `Your WhatsApp OTP is ${otp}`,
-      from: "whatsapp:+14155238886", // ✅ Sandbox number
-      to: `whatsapp:${formattedPhone}`, // ✅ Add whatsapp: prefix
+    console.log(`📱 Attempting to send OTP to: ${formattedPhone}, OTP: ${otp}`);
+    console.log(`📱 Using Twilio from: whatsapp:+14155238886`);
+    console.log(`📱 Sending to: whatsapp:${formattedPhone}`);
+
+    // Send WhatsApp message
+    const message = await client.messages.create({
+      body: `Your JP Group Services verification code is: ${otp}. This code will expire in 10 minutes.`,
+      from: "whatsapp:+14155238886",
+      to: `whatsapp:${formattedPhone}`
     });
 
-    console.log(`✅ WhatsApp OTP sent to ${formattedPhone}: ${otp}`);
-    res.json({ success: true, message: "OTP sent via WhatsApp successfully" });
+    console.log(`✅ WhatsApp message sent successfully!`);
+    console.log(`✅ Message SID: ${message.sid}`);
+    console.log(`✅ Message status: ${message.status}`);
+    console.log(`✅ To: ${formattedPhone}`);
+
+    res.json({ 
+      success: true, 
+      message: "OTP sent via WhatsApp successfully",
+      messageId: message.sid 
+    });
+
   } catch (error) {
-    console.error("❌ WhatsApp Twilio error:", error.message);
-    res.status(500).json({ error: error.message });
+    console.error("❌ Twilio WhatsApp error details:");
+    console.error("Error code:", error.code);
+    console.error("Error message:", error.message);
+    console.error("Error more info:", error.moreInfo);
+    console.error("Error status:", error.status);
+    
+    // Specific error handling
+    if (error.code === 21211) {
+      console.error("❌ Invalid phone number format");
+      return res.status(400).json({ error: "Invalid phone number format" });
+    } else if (error.code === 21408) {
+      console.error("❌ Not authorized to send to this number. Number needs to opt-in.");
+      return res.status(400).json({ error: "Please opt-in to receive WhatsApp messages from us first" });
+    } else if (error.code === 21610) {
+      console.error("❌ Number not on WhatsApp");
+      return res.status(400).json({ error: "This number is not registered on WhatsApp" });
+    } else {
+      console.error("❌ Unknown Twilio error");
+      return res.status(500).json({ error: "Failed to send OTP: " + error.message });
+    }
   }
 });
 
